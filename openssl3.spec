@@ -1,3 +1,5 @@
+%bcond_without compat_package
+
 # openssl is used by systemd, libsystemd is used by wine
 %ifarch %{x86_64}
 %bcond_without compat32
@@ -44,15 +46,13 @@
 %define devel32 libopenssl-devel
 %define static32 libopenssl-static-devel
 
-Name:		openssl
+Name:		openssl3
 Version:	3.6.2
 Release:	%{?beta:0.%{beta}.}1
 Group:		System/Libraries
 Summary:	The OpenSSL cryptography and TLS library
 Source0:	https://www.openssl.org/source/openssl-%{version}%{?beta:-%{beta}}.tar.gz
 Patch0:		openssl-3.0-additional-clang-targets.patch
-# QUIC support patches from https://github.com/quictls/openssl
-# Currently none required
 License:	Apache 2.0
 BuildRequires:	make
 BuildRequires:	perl
@@ -125,6 +125,7 @@ The OpenSSL cryptography library.
 %files -n %{libcrypto}
 %{_libdir}/libcrypto.so.%{major}*
 
+%if ! %{with compat_package}
 %package -n %{devel}
 Summary:	Development files for OpenSSL
 Group:		Development/C
@@ -156,6 +157,7 @@ Static libraries for OpenSSL.
 %files -n %{static}
 %{_libdir}/libssl.a
 %{_libdir}/libcrypto.a
+%endif
 
 %if %{with compat32}
 %package -n %{lib32ssl}
@@ -181,6 +183,7 @@ The OpenSSL cryptography library.
 %files -n %{lib32crypto}
 %{_prefix}/lib/libcrypto.so.%{major}*
 
+%if ! %{with compat_package}
 %package -n %{devel32}
 Summary:	Development files for OpenSSL (32-bit)
 Group:		Development/C
@@ -210,6 +213,7 @@ Static libraries for OpenSSL.
 %files -n %{static32}
 %{_prefix}/lib/libssl.a
 %{_prefix}/lib/libcrypto.a
+%endif
 
 %package 32
 Summary:	Plugins for the 32-bit version of OpenSSL
@@ -232,7 +236,7 @@ Plugins for the 32-bit version of OpenSSL.
 %endif
 
 %prep
-%autosetup -p1 -n %{name}-%{version}%{?beta:-%{beta}}
+%autosetup -p1 -n openssl-%{version}%{?beta:-%{beta}}
 
 %build
 case %{_arch} in
@@ -371,3 +375,11 @@ mkdir -p %{buildroot}%{_modulesloaddir}
 cat > %{buildroot}%{_modulesloaddir}/openssl-tls.conf << EOF
 tls
 EOF
+
+%if %{with compat_package}
+# No -devel for compat packages
+rm -rf %{buildroot}%{_includedir} %{buildroot}%{_libdir}/*.a %{buildroot}%{_libdir}/*.so %{buildroot}%{_mandir}/man3 %{buildroot}%{_docdir} %{buildroot}%{_libdir}/cmake %{buildroot}%{_libdir}/pkgconfig
+%if %{with compat32}
+rm -rf %{buildroot}%{_prefix}/lib/*.a %{buildroot}%{_prefix}/lib/*.so %{buildroot}%{_prefix}/lib/cmake %{buildroot}%{_prefix}/lib/pkgconfig
+%endif
+%endif
